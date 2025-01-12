@@ -1,4 +1,4 @@
-# Data-Analysis-Bootcamp
+# Data-Analysis-Skill
 from Datarockie Batch6 (2022)
 - Google spread sheet
 - SQL programming
