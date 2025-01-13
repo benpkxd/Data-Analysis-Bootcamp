@@ -1,0 +1,179 @@
+---
+title: "Data Analytic with TATA"
+subtitle: "by RStudio"
+author: "Pakakorn Kaeoluan"
+date: "2023/7/4"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+    theme: sandstone
+    highlight: kate
+  pdf_document: 
+    latex_engine: xelatex
+    toc: yes
+    toc_depth: '3'
+  word_document: default
+---
+
+
+```{r, echo=FALSE,warning=FALSE}
+
+library(tidyverse)
+library(rvest)
+library(readxl)
+library(dplyr)
+```
+
+# **1.Import Data**
+```{r, echo=FALSE,warning=FALSE}
+df<-read_excel("OnlineRetail.xlsx")
+df%>%
+  tibble()
+```
+
+# **2.Data prep**
+```{r, echo=FALSE,warning=FALSE}
+## check NA
+df$InvoiceNo%>%
+  mean()
+## summary
+df%>%
+  summary()
+## substitue quantitative data  with median
+df$Quantity<-ifelse(df$Quantity<0,
+                    median(df$Quantity,na.rm = TRUE),
+                    df$Quantity)
+
+df$UnitPrice<-ifelse(df$UnitPrice<=0,
+                    median(df$UnitPrice,na.rm = TRUE),
+                    df$UnitPrice)
+## delete NA value
+dfclean<-df%>%
+  na.omit()
+```
+
+# **3.Analysis: Present to CMO**  
+## 3.1 CMO: Which item is the most sales in the UK?
+```{r,echo=FALSE,warning=FALSE}
+dfclean%>%
+  filter(Country=="United Kingdom")%>%
+  group_by(Description)%>%
+  summarise(sum=sum(Quantity))%>%
+  arrange(desc(sum))
+```
+- ANS: PAPER CRAFT , LITTLE BIRDIE  has the best seller in UK
+
+## 3.2 CMO: Give me 5 items of the worst sales on Dec,2010?
+```{r,echo=FALSE,warning=FALSE}
+dfclean$InvoiceDate<-as.Date(dfclean$InvoiceDate)
+dfclean%>%
+  filter(months(InvoiceDate)=="十二月" & InvoiceDate <= '2010-12-31')%>%
+  group_by(Description)%>%
+  summarise(sum=sum(Quantity))%>%
+  arrange(sum)%>%
+  head(n=5)
+```
+- ANS: 
+  1. 3D HEARTS  HONEYCOMB PAPER GARLAND   
+  2. 5 STRAND GLASS NECKLACE AMBER         
+  3. 75 GREEN FAIRY CAKE CASES             
+  4. AMBER DROP EARRINGS W LONG BEADS      
+  5. AMBER FINE BEAD NECKLACE W TASSEL 
+  
+## 3.3 CMO: How many transactions of PAPER CRAFT?
+```{r,echo=FALSE,warning=FALSE}
+dfclean%>%
+  select(StockCode,Description,Quantity,InvoiceDate,Country,InvoiceNo)%>%
+  filter(grepl("PAPER CRAFT",Description))
+```
+- ANS: 2 transactions
+
+## 3.4 CMO: Please show me line chart of Total Sales in 2011
+```{r,echo=FALSE,warning=FALSE}
+dfclean_viz1<-dfclean%>%
+  filter(InvoiceDate>'2010-12-31'&InvoiceDate<'2012-01-01')
+  
+dfclean_viz1$InvoiceDate<-months(dfclean_viz1$InvoiceDate)
+
+dfclean_viz1<-dfclean_viz1%>%
+  rename(month=InvoiceDate)
+
+dfclean_viz1<-dfclean_viz1%>%
+  group_by(month)%>%
+  summarise(sum(Quantity))
+
+dfclean_viz1<-dfclean_viz1%>%
+  rename(Qty=`sum(Quantity)`)
+  
+dfclean_viz1%>%
+  ggplot(aes(month,Qty))+
+  geom_col()+
+  theme_bw()+
+  labs(x="Month",y="Total Sales",title = "Total sales in 2011")
+```
+
+# **4.Analysis: Present to CEO**  
+## 4.1 CEO: Which month has the most revenue in 2011
+```{r,echo=FALSE,warning=FALSE}
+# first we add revenue column by multiply between quantity and unit price
+dfclean<-dfclean%>%
+  mutate(revenue=Quantity*UnitPrice)
+# then seek an answer
+dfclean%>%
+  filter(InvoiceDate>'2010-12-31')%>%
+  group_by(months(InvoiceDate))%>%
+  summarise(Total_revenue=sum(revenue))%>%
+  rename(month=`months(InvoiceDate)`)%>%
+  arrange(Total_revenue)
+```
+- ANS: December has the most revenue in 2011
+
+
+## 4.2 CEO: Which quarter has the fewest revenue in 2011
+```{r,echo=FALSE,warning=FALSE}
+# first add the quarter in the column
+dfclean<-dfclean%>%
+  mutate(Quarter=quarters.POSIXt(InvoiceDate))
+# then seek an answer
+dfclean%>%
+  filter(InvoiceDate>'2010-12-31')%>%
+  group_by(Quarter)%>%
+  summarise(Total_revenue=sum(revenue))%>%
+  arrange(Total_revenue)
+```
+- ANS: Q1 has the fewest revenue in 2011
+
+
+## 4.3 CEO: Which country is the best choice to expand project
+```{r,echo=FALSE,warning=FALSE}
+dfclean%>%
+  group_by(Country)%>%
+  summarise(Total_revenue=sum(revenue))%>%
+  arrange(Total_revenue)
+```
+- ANS: UAE has the most revenue country. So we might plan to expand project in there.
+
+
+## 4.4 CEO: Describe revenue in each country and month by visualization in UK and UAE
+```{r,echo=FALSE,warning=FALSE}
+dfclean_viz2<-dfclean%>%
+  filter(InvoiceDate>'2010-12-31')%>%
+  mutate(month=months(InvoiceDate))
+  
+  
+dfclean_viz2<-dfclean_viz2%>%
+  group_by(Country,month)%>%
+  summarise(sum(revenue))
+
+
+dfclean_viz2%>%
+  filter(!Country %in% c('United Kingdom','Unspecified','United Arab Emirates'))%>%
+  ggplot(aes(Country,`sum(revenue)`,fill=month))+
+  geom_col()+
+  theme_bw()+
+  labs(x="Country",y="Total Revenue",title = "Total Revenue in 2011")
+```
+
+  
