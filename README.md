@@ -1,5 +1,5 @@
 # Data-Analysis-Skill
-from Datarockie Batch6 (2022)
+Skillsets
 - Google spread sheet
 - SQL programming
 - R programming
@@ -9,3 +9,5 @@ from Datarockie Batch6 (2022)
 - Statistics
 - Machine learning
 - Dashboard
+- Web builder
+- Shell prompt
